@@ -2,9 +2,10 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onCheck)
+import Html.Events exposing (onClick)
 import Http
 import Http.Progress as Progress exposing (Progress(..))
+import Time
 
 
 main : Program Never Model Msg
@@ -50,7 +51,7 @@ initModel =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if model.cancel then
-        Sub.none
+        Time.every Time.second (always RestartDownload)
     else
         case model.bookUrl of
             Just bookUrl ->
@@ -69,6 +70,7 @@ type Msg
     = NoOp
     | GetBook String
     | GetBookProgress (Progress String)
+    | RestartDownload
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -78,12 +80,13 @@ update msg model =
             ( model, Cmd.none )
 
         GetBook url ->
-            ( { model | bookUrl = Just url, cancel = False }, Cmd.none )
+            ( { model | bookUrl = Just url, cancel = Just url == model.bookUrl }, Cmd.none )
 
         GetBookProgress (Done bookContent) ->
             ( { model
                 | progress = Done ""
                 , bookContent = bookContent
+                , bookUrl = Nothing
               }
             , Cmd.none
             )
@@ -97,20 +100,18 @@ update msg model =
             )
 
         GetBookProgress progress ->
+            let
+                percent =
+                    progressLoaded progress
+            in
             ( { model
-                | progress = Debug.log ">>progress" progress
-                , cancel =
-                    let
-                        percent =
-                            progressLoaded progress
-                    in
-                    if percent > 50 && percent < 70 then
-                        True
-                    else
-                        False
+                | progress = progress
               }
             , Cmd.none
             )
+
+        RestartDownload ->
+            ( { model | cancel = False }, Cmd.none )
 
 
 
@@ -121,37 +122,12 @@ view : Model -> Html Msg
 view model =
     div [ viewStyle ]
         [ h1 [] [ text "Elm Http.Progress example" ]
-        , p []
-            [ text "Select a book:"
-            , inputRadio "Essays - Ralph Waldo Emerson" "http://localhost:5000/txt/essays.txt"
-            , inputRadio "Essays - Ralph Waldo Emerson 10x" "http://localhost:5000/txt/essays_10x.txt"
-            , inputRadio "Leviathan - Thomas Hobbes" "http://localhost:5000/txt/leviathan.txt"
-            , inputRadio "Leviathan - Thomas Hobbes 10x" "http://localhost:5000/txt/leviathan_10x.txt"
-            , inputRadio "The Ethics of Aristotle - Aristotle" "http://localhost:5000/txt/ethics.txt"
-            ]
+        , button [ onClick (GetBook "http://localhost:5000/txt/leviathan.txt") ] [ text "Download" ]
         , progressView <|
             toString <|
                 progressLoaded model.progress
         , bookContentView model.bookContent
         , footerView
-        ]
-
-
-inputRadio : String -> String -> Html Msg
-inputRadio labelText url =
-    div []
-        [ label
-            [ onCheck
-                (\isChecked ->
-                    if isChecked then
-                        GetBook url
-                    else
-                        NoOp
-                )
-            ]
-            [ input [ type_ "radio", name "book-radio" ] []
-            , text labelText
-            ]
         ]
 
 
