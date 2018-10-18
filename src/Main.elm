@@ -122,7 +122,9 @@ view : Model -> Html Msg
 view model =
     div [ viewStyle ]
         [ h1 [] [ text "Elm Http.Progress example" ]
-        , button [ onClick (GetBook "http://localhost:5000/txt/leviathan.txt") ] [ text "Download" ]
+        , button [ onClick (GetBook "http://localhost:5000/txt/leviathan.txt") ] [ text "Download 1" ]
+        , button [ onClick (GetBook "https://jsonplaceholder.typicode.com/photos") ] [ text "Download 2" ]
+        , button [ onClick (GetBook "http://www.vizgr.org/historical-events/search.php?format=json&begin_date=-3000000&end_date=20151231&lang=en") ] [ text "Download 3" ]
         , progressView <|
             toString <|
                 progressLoaded model.progress
